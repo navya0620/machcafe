@@ -1447,19 +1447,25 @@ const secData = await secRes.json();
 
 const res = await fetch(`/api/menu?branch_id=${branch_id}`);
     if (!res.ok) throw new Error('No server');
-    const data = await res.json();
-    if (!data.success) throw new Error('API error');
+    const menuData = await res.json();
+    if (!menuData.success) throw new Error('API error');
 
     // Build lookup map
     MENU_MAP = {};
-    data.items.forEach(i => {
+    menuData.items.forEach(i => {
   // Normalize both field names
     i.isAvailable = i.is_available ?? i.isAvailable ?? 1;
     MENU_MAP[i.name] = i;
     });
+
+    // Build sorted section order from DB
+    const sortedSectionSlugs = (secData.success && secData.sections.length)
+      ? secData.sections.map(s => s.slug)
+      : [];
+
     // Clear existing sections before re-rendering
     document.querySelectorAll('.menu-section').forEach(el => el.remove());
-    renderAllSections(data.items);
+    renderAllSections(menuData.items, sortedSectionSlugs);
 
     // Banner hidden — menu auto-loads from DB every time, no Excel needed
     // Excel button in nav is only for when you want to UPDATE the menu
@@ -1469,7 +1475,7 @@ const res = await fetch(`/api/menu?branch_id=${branch_id}`);
   }
 }
 
-function renderAllSections(items) {
+function renderAllSections(items, sortedSectionSlugs = [])  {
   // Remap sections
   items = items.map(item => {
     if (item.section === 'cold' && item.description === 'Mojitos') return { ...item, section: 'cold-mojitos' };
@@ -1478,7 +1484,10 @@ function renderAllSections(items) {
   });
 
   // Collect all unique sections in order
-  const sectionOrder = [...Object.keys(SECTION_META)];
+  // Collect all unique sections in order — use DB sort_order first
+  const sectionOrder = sortedSectionSlugs.length
+    ? [...sortedSectionSlugs]
+    : [...Object.keys(SECTION_META)];
   items.forEach(i => { if (!sectionOrder.includes(i.section)) sectionOrder.push(i.section); });
 
   // Group by section
