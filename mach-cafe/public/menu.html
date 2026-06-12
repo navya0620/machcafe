@@ -1226,7 +1226,29 @@ async function onBranchChange(branch_id) {
 
   await loadMenu();
 }
-  function logout() {
+  async function logout() {
+  try {
+    const token   = localStorage.getItem('mach_token') || '';
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const role    = payload.role;
+
+    if (role === 'cashier') {
+      const branch_id = localStorage.getItem('mach_branch_id') || 1;
+      const res  = await fetch(`/api/cash/today?branch_id=${branch_id}`, {
+        headers: token ? { Authorization: 'Bearer ' + token } : {}
+      });
+      const data = await res.json();
+      const opening = data.opening_cash;
+      const closing = data.closing_cash;
+      if (opening !== null && opening !== undefined &&
+          (closing === null || closing === undefined)) {
+        alert('Closing cash not set. Please go to the Printer Dashboard to set closing cash before logging out.');
+        return;
+      }
+    }
+  } catch(e) {
+    // If token unreadable or API fails, allow logout
+  }
   localStorage.removeItem('mach_token');
   localStorage.removeItem('mach_branch_id');
   localStorage.removeItem('mach_branch_slug');
