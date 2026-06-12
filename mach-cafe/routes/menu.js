@@ -152,6 +152,22 @@ router.post('/import-excel', verifyToken, resolveBranch, (req, res) => {
       `).run(req.branch_id, uniqueName, price, emoji, section, category, badge, desc, isFeatured, is_available);
 
       inserted.push(uniqueName);
+      // Auto-create a menu_sections entry if this section doesn't exist yet
+const sectionExists = db.prepare('SELECT id FROM menu_sections WHERE branch_id = ? AND slug = ?').get(req.branch_id, section);
+if (!sectionExists) {
+  const maxOrder = db.prepare('SELECT MAX(sort_order) as m FROM menu_sections WHERE branch_id = ?').get(req.branch_id);
+  db.prepare(`
+    INSERT INTO menu_sections (branch_id, slug, icon, title, description, sort_order)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run(
+    req.branch_id,
+    section,
+    emoji || '🍽️',
+    section.charAt(0).toUpperCase() + section.slice(1).replace(/-/g, ' '),
+    '',
+    (maxOrder.m || 0) + 1
+  );
+}
     }
   })();
 
