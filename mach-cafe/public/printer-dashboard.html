@@ -506,6 +506,23 @@ const BRANCH       = BRANCH_SLUG;   // used in API calls
 const BRANCH_LABEL = BRANCH_NAME || BRANCH_SLUG; // used in display
 
 function logout() {
+  try {
+    const token   = localStorage.getItem('mach_token') || '';
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const role    = payload.role;
+
+    if (role === 'cashier' &&
+        todayCash.opening !== null && todayCash.opening !== undefined &&
+        (todayCash.closing === null || todayCash.closing === undefined)) {
+      pendingLogout = true;
+      openCashModal('close');
+      return;
+    }
+  } catch(e) { /* if token unreadable, just logout */ }
+  doLogout();
+}
+
+function doLogout() {
   localStorage.removeItem('mach_token');
   localStorage.removeItem('mach_branch_id');
   localStorage.removeItem('mach_branch_slug');
@@ -602,10 +619,9 @@ async function fetchOrders() {
     document.getElementById('s-rev').textContent    = '₹' + orders.reduce((s,o)=>s+o.grand,0).toLocaleString('en-IN');
 
     const upiRev  = orders.filter(o => (o.paymentMode||'').toUpperCase() === 'UPI').reduce((s,o)=>s+o.grand,0);
-    const cashRev = orders.filter(o => (o.paymentMode||'').toUpperCase() === 'CASH').reduce((s,o)=>s+o.grand,0);
+    todayCashRevenue = orders.filter(o => (o.paymentMode||'').toUpperCase() === 'CASH').reduce((s,o)=>s+o.grand,0);
     document.getElementById('s-upi').textContent    = '₹' + upiRev.toLocaleString('en-IN');
-    document.getElementById('s-cash').textContent   = '₹' + cashRev.toLocaleString('en-IN');
-
+    document.getElementById('s-cash').textContent   = '₹' + todayCashRevenue.toLocaleString('en-IN');
     const gstOrders = orders.filter(o => { const pm = (o.paymentMode||'').toUpperCase(); return pm === 'UPI' || pm === 'CASH'; });
     const totalGst  = gstOrders.reduce((s,o) => s + ((o.cgst||0) + (o.sgst||0)), 0);
     document.getElementById('s-gst').textContent   = '₹' + totalGst.toLocaleString('en-IN');
@@ -790,6 +806,8 @@ function renderItemSummary(orders) {
 // ── Cash Register ──
 let cashModalType = 'open';
 let todayCash = { opening: null, closing: null, given: null };
+let todayCashRevenue = 0;
+let pendingLogout = false;
 async function fetchCashRegister() {
   if (!BRANCH_ID) return;
   try {
@@ -855,7 +873,7 @@ function renderCashBar() {
   // Discrepancy
   const discBlock = document.getElementById('cb-disc');
   if (opening !== null && closing !== null && opening !== undefined && closing !== undefined) {
-    const cashRev  = parseFloat(document.getElementById('s-cash').textContent.replace('₹','').replace(/,/g,'')) || 0;
+    const cashRev  = todayCashRevenue;
     const expected = Number(opening) + cashRev;
     const diff     = Number(closing) - expected;
     const discEl   = document.getElementById('cb-disc-val');
@@ -886,6 +904,10 @@ function openCashModal(type) {
 
 function closeCashModal() {
   document.getElementById('cash-modal').style.display = 'none';
+  if (pendingLogout) {
+    pendingLogout = false;
+    alert('You must set the closing cash before logging out.');
+  }
 }
 
 async function submitCash() {
@@ -908,8 +930,12 @@ async function submitCash() {
     else if (cashModalType === 'close') todayCash.closing = amount;
     else todayCash.given = amount;
 
-    closeCashModal();
+   closeCashModal();
     await fetchCashRegister();
+    if (pendingLogout && cashModalType === 'close') {
+      pendingLogout = false;
+      doLogout();
+    }
   } catch(e) {
     alert('Could not save: ' + e.message);
   }
@@ -917,7 +943,7 @@ async function submitCash() {
 
 function printCashSummary() {
   const { opening, closing, given, date } = todayCash;
-  const cashRev  = parseFloat(document.getElementById('s-cash').textContent.replace('₹','').replace(/,/g,'')) || 0;
+  const cashRev  = todayCashRevenue;
   const expected = (opening !== null && opening !== undefined) ? (Number(opening) + cashRev) : null;
   const diff     = (closing !== null && closing !== undefined && expected !== null) ? (Number(closing) - expected) : null;
   const displayDate = date || todayStr();
