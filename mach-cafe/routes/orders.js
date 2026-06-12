@@ -85,9 +85,9 @@ router.post('/', verifyToken, resolveBranch, (req, res) => {
       const subtotal = items.reduce((s, i) => s + i.qty * i.rate, 0);
       const withGst  = req.body.withGst !== false && req.body.withGst !== 'false';
       const noGst    = req.body.withGst === false || req.body.withGst === 'false' || req.body.withGst === 0;
-      const cgst = noGst ? 0 : Math.round(subtotal * 0.025 * 100) / 100;
-      const sgst = noGst ? 0 : Math.round(subtotal * 0.025 * 100) / 100;
-      const grand = Math.round((subtotal + cgst + sgst) * 100) / 100;
+      const cgst = noGst ? 0 : Math.round(subtotal * 0.025);
+      const sgst = noGst ? 0 : Math.round(subtotal * 0.025);
+      const grand = subtotal + cgst + sgst;
       // Capture IST timestamp at order placement time
       const nowIST = new Date(Date.now() + 5.5 * 60 * 60 * 1000)
         .toISOString().replace('T', ' ').slice(0, 19);
