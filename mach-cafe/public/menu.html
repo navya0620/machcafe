@@ -1660,7 +1660,7 @@ function changeQty(name, delta) {
 function updateCartUI() {
   const totalQty   = cart.reduce((s, i) => s + i.qty, 0);
   const subtotal   = cart.reduce((s, i) => s + i.price * i.qty, 0);
-  const gst   = gstEnabled ? Math.round(subtotal * 0.05 * 100) / 100 : 0;
+  const gst = gstEnabled ? Math.round(subtotal * 0.05) : 0;
   const total = subtotal + gst;
   const cartFab = document.getElementById('cart-fab');
   const role    = getRole();
@@ -1673,7 +1673,7 @@ function updateCartUI() {
 
   document.getElementById('cart-count').textContent    = totalQty;
   document.getElementById('cart-subtotal').textContent = '₹' + subtotal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-  document.getElementById('cart-gst').textContent      = '₹' + gst.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  document.getElementById('cart-gst').textContent = '₹' + gst.toLocaleString('en-IN', {minimumFractionDigits: 0, maximumFractionDigits: 0});
   document.getElementById('cart-total').textContent    = '₹' + total.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
   document.getElementById('btn-place-order').disabled  = cart.length === 0;
   document.getElementById('btn-park-order').disabled   = cart.length === 0;
@@ -1823,8 +1823,8 @@ async function confirmOrder() {
       customer:    { name: customer.name, phone: null, email: customer.email },
       items:       _cartSnapshot.map(i => ({ name: i.name, qty: i.qty, rate: i.price, amount: i.price * i.qty, emoji: i.emoji })),
       subtotal:    _subtotal,
-      cgst:        gstEnabled ? Math.round(_subtotal * 0.025 * 100) / 100 : 0,
-      sgst:        gstEnabled ? Math.round(_subtotal * 0.025 * 100) / 100 : 0,
+      cgst: gstEnabled ? Math.round(_subtotal * 0.025) : 0,
+      sgst: gstEnabled ? Math.round(_subtotal * 0.025) : 0,
       grand:       gstEnabled ? data.grand : _subtotal,
     };
 
@@ -1856,8 +1856,8 @@ async function confirmOrder() {
   } catch (e) {
     // Offline fallback
     const subtotal = _cartSnapshot.reduce((s, i) => s + i.price * i.qty, 0);
-const cgst  = gstEnabled ? subtotal * 0.025 : 0;
-const sgst  = gstEnabled ? subtotal * 0.025 : 0;
+const cgst = gstEnabled ? Math.round(subtotal * 0.025) : 0;
+const sgst = gstEnabled ? Math.round(subtotal * 0.025) : 0;
 const grand = subtotal + cgst + sgst;
 
 const inv = {
@@ -1915,8 +1915,8 @@ function showInvoice(inv) {
   const gstRowEls = [document.getElementById('inv-gst-rows'), document.getElementById('inv-sgst-row')];
   const noGstInv = inv.cgst === undefined || inv.sgst === undefined || (inv.cgst === 0 && inv.sgst === 0);
   gstRowEls.forEach(el => { if (el) el.style.display = noGstInv ? 'none' : 'flex'; });
-  document.getElementById('inv-cgst').textContent = Number(inv.cgst).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-  document.getElementById('inv-sgst').textContent = Number(inv.sgst).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  document.getElementById('inv-cgst').textContent = Number(inv.cgst).toLocaleString('en-IN', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+  document.getElementById('inv-sgst').textContent = Number(inv.sgst).toLocaleString('en-IN', {minimumFractionDigits: 0, maximumFractionDigits: 0});
   document.getElementById('inv-grand').textContent = Number(inv.grand).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
   document.getElementById('invoice-overlay').classList.add('open');
   console.log(
@@ -1962,7 +1962,7 @@ function onPaymentModeChange() {
 
 function calcChange() {
   const subtotal = cart.reduce((s, i) => s + i.price * i.qty, 0);
-  const gst   = gstEnabled ? Math.round(subtotal * 0.05 * 100) / 100 : 0;
+  const gst = gstEnabled ? Math.round(subtotal * 0.05) : 0;
   const total = subtotal + gst;
 
   const received = parseFloat(document.getElementById('cash-received').value) || 0;
