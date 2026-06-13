@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MACH Cafe — Printer Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+@font-face {
+  font-family: 'Lastica';
+  src: url('/fonts/NobodyTalks-oZo4.ttf') format('truetype');
+}
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg:        #F7F2EC;
+    --surface:   #FFFFFF;
+    --espresso:  #3B1F0C;
+    --mocha:     #5A3520;
+    --caramel:   #7B4F2E;
+    --latte:     #C8956C;
+    --muted:     #8A6B55;
+    --border:    rgba(123,79,46,0.15);
+    --accent:    #7B4F2E;   /* Guntupalli — warm brown */
+    --accent2:   #C8956C;
+    --p1:        #616161;
+    --p2:        #1565C0;
+    --p3:        #BF360C;
+  }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'Jost', sans-serif; background: var(--bg); color: var(--espresso); min-height: 100vh; }
+
+  /* ── AUTH GATE ── */
+  #auth-gate {
+    position: fixed; inset: 0; background: var(--espresso);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9999; flex-direction: column; gap: 1rem;
+  }
+  #auth-gate p { color: rgba(255,255,255,0.5); font-size: 0.85rem; letter-spacing: 3px; text-transform: uppercase; }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--espresso);
+    padding: 0 2.5rem;
+    display: flex; align-items: stretch; justify-content: space-between;
+    gap: 1rem; position: sticky; top: 0; z-index: 100;
+    border-bottom: 3px solid var(--accent);
+    min-height: 64px;
+  }
+  .header-left { display: flex; align-items: center; gap: 1.2rem; }
+  .branch-pill {
+    display: flex; align-items: center; gap: 0.5rem;
+    background: var(--accent); padding: 0.35rem 1rem;
+    font-size: 0.68rem; letter-spacing: 3px; text-transform: uppercase;
+    color: #fff; font-weight: 600; align-self: stretch;
+  }
+  .branch-pill .loc-icon { font-size: 1rem; }
+  .header-title { font-family: 'Playfair Display', serif; font-size: 1.2rem; color: #fff; }
+  .header-title span { color: var(--latte); font-style: italic; }
+  .header-right { display: flex; align-items: center; gap: 1.5rem; }
+  .live-badge {
+    display: flex; align-items: center; gap: 0.4rem;
+    font-size: 0.68rem; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.45);
+  }
+  .live-dot { width: 8px; height: 8px; border-radius: 50%; background: #4caf50; animation: blink 1.5s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.25} }
+  .last-upd { font-size: 0.68rem; color: rgba(255,255,255,0.3); letter-spacing: 1px; }
+  .btn-logout {
+    background: none; border: 1px solid rgba(255,255,255,0.15);
+    color: rgba(255,255,255,0.5); font-family: 'Jost', sans-serif;
+    font-size: 0.68rem; letter-spacing: 2px; text-transform: uppercase;
+    padding: 0.4rem 1rem; cursor: pointer; transition: all 0.2s; align-self: center;
+  }
+  .btn-logout:hover { border-color: var(--latte); color: var(--latte); }
+
+  /* ── DATE BAR ── */
+  .date-bar {
+    background: var(--mocha); padding: 0.8rem 2.5rem;
+    display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .date-bar label { font-size: 0.65rem; letter-spacing: 2.5px; text-transform: uppercase; color: rgba(255,255,255,0.4); white-space: nowrap; }
+  .date-bar input[type="date"] {
+    background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.15);
+    color: #fff; padding: 0.35rem 0.8rem; font-family: 'Jost', sans-serif;
+    font-size: 0.82rem; outline: none; cursor: pointer;
+  }
+  .date-bar input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
+  .chips { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+  .chip {
+    font-size: 0.65rem; padding: 0.28rem 0.75rem; cursor: pointer;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.5); letter-spacing: 1px; text-transform: uppercase;
+    transition: all 0.2s; font-family: 'Jost', sans-serif;
+  }
+  .chip:hover { background: rgba(255,255,255,0.14); color: #fff; }
+  .chip.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .divider { color: rgba(255,255,255,0.15); }
+  .avail-label { font-size: 0.62rem; color: rgba(255,255,255,0.3); letter-spacing: 1px; white-space: nowrap; }
+  .avail-dates { display: flex; gap: 0.3rem; flex-wrap: wrap; align-items: center; }
+
+  /* ── STATS ROW ── */
+  .stats {
+    display: grid; grid-template-columns: repeat(8, 1fr);
+    gap: 1px; background: var(--border); border-bottom: 1px solid var(--border);
+  }
+  .stat-box { background: var(--surface); padding: 1.1rem 1.4rem; display: flex; align-items: center; gap: 0.7rem; }
+  .stat-icon { font-size: 1.5rem; }
+  .stat-label { font-size: 0.6rem; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+  .stat-value { font-family: 'Playfair Display', serif; font-size: 1.5rem; color: var(--espresso); }
+  .stat-value.upi  { color: #1565C0; }
+  .stat-value.cash { color: #2e7d32; }
+  .stat-value.gst  { color: #7B4F2E; }
+/* Reprint */
+  .btn-reprint {
+  font-size: 0.62rem; letter-spacing: 1.5px; text-transform: uppercase;
+  padding: 0.28rem 0.8rem; cursor: pointer; font-family: 'Jost', sans-serif;
+  background: none; border: 1px solid var(--border); color: var(--muted);
+  transition: all 0.2s; margin-top: 0.5rem; display: block; width: 100%;
+}
+.btn-reprint:hover { border-color: var(--caramel); color: var(--caramel); background: rgba(123,79,46,0.05); }
+  /* ── LEGEND ── */
+  .legend {
+    display: flex; gap: 2rem; flex-wrap: wrap; align-items: center;
+    padding: 0.6rem 2.5rem; background: var(--espresso);
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .legend-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.65rem; color: rgba(255,255,255,0.4); letter-spacing: 1px; text-transform: uppercase; }
+  .leg-bar { width: 18px; height: 3px; border-radius: 1px; }
+
+  /* ── ORDERS ── */
+  .orders { padding: 1.5rem 2.5rem; display: flex; flex-direction: column; gap: 1rem; }
+  .empty, .error { text-align: center; padding: 5rem 2rem; color: var(--muted); font-size: 0.9rem; line-height: 1.8; }
+  .error { color: #c62828; }
+
+  .order-card {
+    background: var(--surface);
+    border-left: 4px solid #ccc;
+    display: grid; grid-template-columns: 1fr 140px;
+    gap: 1rem; align-items: start;
+    padding: 0;
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+  }
+  .order-card:hover { box-shadow: 0 4px 24px rgba(59,31,12,0.1); }
+  .order-card.p1only { border-left-color: var(--p1); }
+  .order-card.p12    { border-left-color: var(--p2); }
+  .order-card.p13    { border-left-color: var(--p3); }
+  .order-card.p123   { border-left-color: #7B1FA2; }
+
+  .card-main { padding: 1.2rem 1.5rem; }
+  .order-top { display: flex; align-items: center; gap: 0.7rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
+  .inv-no { font-weight: 600; font-size: 0.88rem; color: var(--espresso); font-family: 'Jost', sans-serif; letter-spacing: 0.5px; }
+  .table-tag { font-size: 0.65rem; background: rgba(123,79,46,0.08); padding: 0.2rem 0.6rem; color: var(--caramel); letter-spacing: 1px; }
+  .status-tag { font-size: 0.62rem; letter-spacing: 1.5px; text-transform: uppercase; padding: 0.2rem 0.6rem; }
+  .status-PENDING   { background: #fff3e0; color: #e65100; }
+  .status-PAID      { background: #e8f5e9; color: #2e7d32; }
+  .status-DONE      { background: #e8f5e9; color: #2e7d32; }
+  .status-CANCELLED { background: #ffebee; color: #c62828; }
+  .status-PREPARING { background: #e3f2fd; color: #1565C0; }
+  .status-READY     { background: #f3e5f5; color: #6A1B9A; }
+  .time-tag { font-size: 0.7rem; color: var(--muted); margin-left: auto; }
+
+  .printer-badges { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
+  .p-badge { font-size: 0.65rem; letter-spacing: 1px; text-transform: uppercase; padding: 0.22rem 0.7rem; font-weight: 600; }
+  .p-badge.p1 { background: #f5f5f5; color: var(--p1); border: 1px solid #e0e0e0; }
+  .p-badge.p2 { background: #e3f2fd; color: var(--p2); border: 1px solid #bbdefb; }
+  .p-badge.p3 { background: #fbe9e7; color: var(--p3); border: 1px solid #ffccbc; }
+
+  .items-cols { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+  .items-col { flex: 1; min-width: 160px; }
+  .items-col h4 {
+    font-size: 0.6rem; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 0.4rem; padding-bottom: 0.3rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .item-row { font-size: 0.78rem; color: var(--mocha); padding: 0.18rem 0; display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
+  .item-row .item-meta { color: var(--muted); font-size: 0.68rem; white-space: nowrap; }
+
+  .card-right {
+    background: rgba(123,79,46,0.04);
+    border-left: 1px solid var(--border);
+    padding: 1.2rem 1rem;
+    display: flex; flex-direction: column; align-items: flex-end; justify-content: space-between;
+    height: 100%; min-height: 100px;
+  }
+  .grand-label { font-size: 0.58rem; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+  .grand-amount { font-family: 'Playfair Display', serif; font-size: 1.4rem; color: var(--caramel); }
+  .customer-name { font-size: 0.75rem; color: var(--espresso); font-weight: 500; text-align: right; margin-top: 0.6rem; }
+  .customer-phone { font-size: 0.68rem; color: var(--muted); text-align: right; }
+
+  /* ── PAYMENT MODE BADGES ── */
+  .pm-badge {
+    font-size: 0.62rem; letter-spacing: 1px; text-transform: uppercase;
+    padding: 0.18rem 0.6rem; font-weight: 600; border-radius: 2px;
+  }
+  .pm-upi   { background: #e3f2fd; color: #1565C0; border: 1px solid #bbdefb; }
+  .pm-cash  { background: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+  .pm-other { background: #f3e5f5; color: #6A1B9A; border: 1px solid #e1bee7; }
+
+  /* ── CASH REGISTER BAR ── */
+.cash-bar {
+  background: var(--surface);
+  border-bottom: 2px solid var(--border);
+  padding: 0.9rem 2.5rem;
+  display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;
+}
+.cash-bar-title {
+  font-size: 0.6rem; letter-spacing: 3px; text-transform: uppercase;
+  color: var(--muted); white-space: nowrap;
+}
+.cash-block {
+  display: flex; align-items: center; gap: 0.7rem;
+  background: var(--bg); border: 1px solid var(--border);
+  padding: 0.55rem 1rem; flex: 1; min-width: 180px;
+}
+.cash-block-icon { font-size: 1.2rem; }
+.cash-block-label { font-size: 0.58rem; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+.cash-block-value { font-family: 'Playfair Display', serif; font-size: 1.2rem; color: var(--espresso); }
+.cash-block-value.not-set { font-size: 0.78rem; color: #e65100; font-family: 'Jost', sans-serif; font-style: italic; }
+.cash-block.opening { border-left: 3px solid #2e7d32; }
+.cash-block.closing { border-left: 3px solid #1565C0; }
+.cash-block.discrepancy.ok  { border-left: 3px solid #2e7d32; }
+.cash-block.discrepancy.warn { border-left: 3px solid #e65100; }
+.cash-discrepancy-value.ok   { color: #2e7d32; }
+.cash-discrepancy-value.warn { color: #e65100; }
+.btn-cash {
+  font-size: 0.65rem; letter-spacing: 2px; text-transform: uppercase;
+  padding: 0.45rem 1.1rem; cursor: pointer; font-family: 'Jost', sans-serif;
+  background: var(--accent); border: none; color: #fff;
+  transition: background 0.2s; white-space: nowrap;
+}
+.btn-cash:hover { background: var(--mocha); }
+.btn-cash.secondary {
+  background: none; border: 1px solid var(--border); color: var(--muted);
+}
+.btn-cash.secondary:hover { border-color: var(--caramel); color: var(--caramel); background: rgba(123,79,46,0.05); }
+.btn-cash.print-cash {
+  background: var(--mocha); border: none; color: #fff;
+}
+.btn-cash.print-cash:hover { background: var(--espresso); }
+.cash-block.given { border-left: 3px solid #7B1FA2; }
+
+/* ── CASH MODAL ── */
+.cash-modal-backdrop {
+  position: fixed; inset: 0; background: rgba(30,10,0,0.55);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 500; backdrop-filter: blur(2px);
+}
+.cash-modal {
+  background: var(--surface); width: 340px; max-width: 94vw;
+  border-top: 4px solid var(--accent);
+  padding: 2rem; display: flex; flex-direction: column; gap: 1.2rem;
+}
+.cash-modal-title {
+  font-family: 'Playfair Display', serif; font-size: 1.15rem; color: var(--espresso);
+}
+.cash-modal-sub { font-size: 0.75rem; color: var(--muted); margin-top: -0.6rem; }
+.cash-modal label { font-size: 0.6rem; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 0.35rem; }
+.cash-modal input[type="number"] {
+  width: 100%; padding: 0.65rem 0.9rem;
+  border: 1px solid var(--border); background: var(--bg);
+  font-family: 'Playfair Display', serif; font-size: 1.4rem; color: var(--espresso);
+  outline: none;
+}
+.cash-modal input[type="number"]:focus { border-color: var(--caramel); }
+.cash-modal-actions { display: flex; gap: 0.6rem; justify-content: flex-end; }
+
+@media (max-width: 640px) {
+  .cash-bar { padding: 0.8rem 1rem; gap: 0.8rem; }
+  .cash-block { min-width: 140px; }
+}
+  /* ── ITEM SUMMARY ── */
+.item-summary {
+  padding: 1.2rem 2.5rem;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.item-summary-title {
+  font-size: 0.62rem; letter-spacing: 3px; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;
+}
+.item-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 0.6rem;
+}
+.item-chip {
+  display: flex; justify-content: space-between; align-items: center;
+  background: var(--bg); border: 1px solid var(--border);
+  padding: 0.5rem 0.85rem; gap: 0.5rem;
+}
+.item-chip-name {
+  font-size: 0.78rem; color: var(--espresso); font-weight: 500;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.item-chip-count {
+  font-family: 'Playfair Display', serif; font-size: 1.1rem;
+  color: var(--caramel); flex-shrink: 0;
+}
+.item-chip.bev   { border-left: 3px solid var(--p2); }
+.item-chip.food  { border-left: 3px solid var(--p3); }
+
+@media (max-width: 640px) {
+  .item-summary { padding: 1rem; }
+  .item-summary-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+}
+
+  .pm-total {
+    font-size: 0.62rem; letter-spacing: 1px; text-transform: uppercase;
+    padding: 0.15rem 0.5rem; font-weight: 600; border-radius: 2px;
+    margin-top: 0.3rem; display: inline-block;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .stats { grid-template-columns: repeat(4, 1fr); }
+  }
+
+  @media (max-width: 640px) {
+    header { padding: 0 1rem; }
+    .header-title { display: none; }
+    .last-upd { display: none; }
+    .date-bar { padding: 0.7rem 1rem; gap: 0.6rem; }
+    .legend { padding: 0.5rem 1rem; gap: 1rem; }
+    .orders { padding: 1rem; }
+    .stats { grid-template-columns: repeat(4, 1fr); }
+    .order-card { grid-template-columns: 1fr; }
+    .card-right {
+      border-left: none;
+      border-top: 1px solid var(--border);
+      flex-direction: row;
+      justify-content: space-between;
+      align-items: center;
+      height: auto;
+      min-height: unset;
+      padding: 0.85rem 1.2rem;
+    }
+    .customer-name,
+    .customer-phone { text-align: left; margin-top: 0; }
+    .grand-amount { font-size: 1.2rem; }
+  }
+
+  @media (max-width: 480px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .branch-pill { font-size: 0.6rem; letter-spacing: 2px; padding: 0.3rem 0.7rem; }
+    .btn-logout { padding: 0.3rem 0.7rem; font-size: 0.6rem; letter-spacing: 1px; }
+    .live-badge { display: none; }
+    .order-top { gap: 0.4rem; }
+    .time-tag { margin-left: 0; width: 100%; order: 5; }
+    .stat-box { padding: 0.85rem 0.9rem; gap: 0.5rem; }
+    .stat-icon { font-size: 1.2rem; }
+    .stat-value { font-size: 1.25rem; }
+    .card-main { padding: 1rem; }
+  }
+
+  @media (max-width: 360px) {
+    header { min-height: 52px; }
+    .branch-pill { letter-spacing: 1px; font-size: 0.58rem; }
+    .btn-logout { display: none; }
+    .stat-box { padding: 0.7rem 0.6rem; }
+    .stat-label { font-size: 0.55rem; letter-spacing: 1.5px; }
+  }
+
+</style>
+</head>
+<body>
+
+<div id="auth-gate">
+  <p>🔐 Verifying access…</p>
+</div>
+
+<header>
+  <div class="header-left">
+    <div class="branch-pill"><span class="loc-icon">🏡</span> <span id="branch-pill-text">Loading…</span></div>
+    <div class="header-title"><span style="font-family: 'Lastica', sans-serif; color:#3a2010">MACH </span>
+  <em style="font-family: 'italic'; color: var(--caramel); font-style: italic;">Cafe</em> — Printer Routing</div>
+  </div>
+  <div class="header-right">
+    <span class="last-upd" id="last-upd">Fetching…</span>
+    <div class="live-badge"><div class="live-dot"></div> Live</div>
+    <a href="menu.html" style="
+  background: none;
+  border: 1px solid rgba(255,255,255,0.15);
+  color: rgba(255,255,255,0.6);
+  font-family: 'Jost', sans-serif;
+  font-size: 0.68rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 0.4rem 1rem;
+  text-decoration: none;
+  transition: all 0.2s;
+  align-self: center;
+" onmouseover="this.style.color='#C8956C';this.style.borderColor='#C8956C'"
+   onmouseout="this.style.color='rgba(255,255,255,0.6)';this.style.borderColor='rgba(255,255,255,0.15)'">
+  ⬅ Back To Menu
+</a>
+    <button class="btn-logout" onclick="logout()">Logout</button>
+  </div>
+</header>
+
+<div class="date-bar">
+  <label>Filter</label>
+  <input type="date" id="date-picker">
+  <div class="chips">
+    <div class="chip active" onclick="selectChip(this, 0)">Today</div>
+    <div class="chip" onclick="selectChip(this, 1)">Yesterday</div>
+    <div class="chip" onclick="selectChip(this, 7)">Last 7 Days</div>
+    <div class="chip" onclick="selectChip(this, -1)">All Time</div>
+  </div>
+  <span class="divider">|</span>
+  <span class="avail-label">Days with orders:</span>
+  <div class="avail-dates" id="avail-dates">—</div>
+</div>
+
+<div class="stats">
+  <div class="stat-box"><div class="stat-icon">📋</div><div><div class="stat-label">Orders</div><div class="stat-value" id="s-total">—</div></div></div>
+  <div class="stat-box"><div class="stat-icon">💰</div><div><div class="stat-label">Total Revenue</div><div class="stat-value" id="s-rev">—</div></div></div>
+  <div class="stat-box"><div class="stat-icon">📲</div><div><div class="stat-label">UPI Revenue</div><div class="stat-value upi" id="s-upi">—</div></div></div>
+  <div class="stat-box"><div class="stat-icon">💵</div><div><div class="stat-label">Cash Revenue</div><div class="stat-value cash" id="s-cash">—</div></div></div>
+  <div class="stat-box"><div class="stat-icon">🧾</div><div><div class="stat-label">GST (UPI + Cash)</div><div class="stat-value gst" id="s-gst">—</div></div></div>
+  <div class="stat-box"><div class="stat-icon">🖨️</div><div><div class="stat-label">Printer 1 (Full)</div><div class="stat-value" id="s-p1">—</div></div></div>
+  <div class="stat-box"><div class="stat-icon">☕</div><div><div class="stat-label">Printer 2 (Bev)</div><div class="stat-value" id="s-p2">—</div></div></div>
+  <div class="stat-box"><div class="stat-icon">🍛</div><div><div class="stat-label">Printer 3 (Food)</div><div class="stat-value" id="s-p3">—</div></div></div>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="leg-bar" style="background:var(--p1)"></div> Printer 1 only</div>
+  <div class="legend-item"><div class="leg-bar" style="background:var(--p2)"></div> Printer 1 + 2 (beverages)</div>
+  <div class="legend-item"><div class="leg-bar" style="background:var(--p3)"></div> Printer 1 + 3 (food)</div>
+  <div class="legend-item"><div class="leg-bar" style="background:#7B1FA2"></div> All 3 printers</div>
+</div>
+<!-- ── CASH REGISTER BAR ── -->
+<div class="cash-bar" id="cash-bar">
+  <span class="cash-bar-title">💵 Cash Register</span>
+
+  <div class="cash-block opening" id="cb-opening">
+    <div class="cash-block-icon">🟢</div>
+    <div>
+      <div class="cash-block-label">Opening Cash</div>
+      <div class="cash-block-value not-set" id="cb-opening-val">Not set</div>
+    </div>
+  </div>
+
+  <div class="cash-block closing" id="cb-closing">
+    <div class="cash-block-icon">🔵</div>
+    <div>
+      <div class="cash-block-label">Closing Cash</div>
+      <div class="cash-block-value not-set" id="cb-closing-val">Not set</div>
+    </div>
+  </div>
+
+  <div class="cash-block discrepancy" id="cb-disc" style="display:none">
+    <div class="cash-block-icon">⚖️</div>
+    <div>
+      <div class="cash-block-label">Discrepancy</div>
+      <div class="cash-block-value cash-discrepancy-value" id="cb-disc-val">—</div>
+    </div>
+  </div>
+
+  <div class="cash-block given" id="cb-given">
+    <div class="cash-block-icon">🤝</div>
+    <div>
+      <div class="cash-block-label">Given to Owner</div>
+      <div class="cash-block-value not-set" id="cb-given-val">Not set</div>
+    </div>
+  </div>
+
+  <div style="margin-left:auto; display:flex; gap:0.5rem; flex-wrap:wrap; align-items:center;">
+    <button class="btn-cash secondary" id="btn-set-opening" onclick="openCashModal('open')">Set Opening</button>
+    <button class="btn-cash secondary" id="btn-set-closing" onclick="openCashModal('close')" style="display:none">Set Closing</button>
+    <button class="btn-cash secondary" id="btn-set-given" onclick="openCashModal('given')" style="display:none">Set Given to Owner</button>
+    <button class="btn-cash print-cash" onclick="printCashSummary()">🖨 Print Cash</button>
+  </div>
+</div>
+
+<!-- ── CASH MODAL ── -->
+<div class="cash-modal-backdrop" id="cash-modal" style="display:none" onclick="if(event.target===this)closeCashModal()">
+  <div class="cash-modal">
+    <div>
+      <div class="cash-modal-title" id="cash-modal-title">Opening Cash</div>
+      <div class="cash-modal-sub" id="cash-modal-sub">Enter the cash float in the drawer at start of day.</div>
+    </div>
+    <div>
+      <label>Amount (₹)</label>
+      <input type="number" id="cash-modal-input" placeholder="0" min="0" step="1">
+    </div>
+    <div class="cash-modal-actions">
+      <button class="btn-cash secondary" onclick="closeCashModal()">Cancel</button>
+      <button class="btn-cash" onclick="submitCash()">Confirm</button>
+    </div>
+  </div>
+</div>
+<div class="item-summary" id="item-summary" style="display:none">
+  <div class="item-summary-title">📊 Item-wise Count</div>
+  <div class="item-summary-grid" id="item-summary-grid"></div>
+</div>
+<div class="orders" id="orders"></div>
+
+<script>
+// ── Read branch dynamically from localStorage (set by owner-dashboard or JWT) ──
+const BRANCH_ID   = parseInt(localStorage.getItem('mach_branch_id'))   || null;
+const BRANCH_SLUG = localStorage.getItem('mach_branch_slug') || '';
+const BRANCH_NAME = localStorage.getItem('mach_branch_name') || '';
+const BRANCH       = BRANCH_SLUG;   // used in API calls
+const BRANCH_LABEL = BRANCH_NAME || BRANCH_SLUG; // used in display
+
+function logout() {
+  try {
+    const token   = localStorage.getItem('mach_token') || '';
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const role    = payload.role;
+
+    if (role === 'cashier' &&
+    todayCash.opening !== null && todayCash.opening !== undefined) {
+    pendingLogout = true;
+    openCashModal('close');
+    return;
+    }
+  } catch(e) { /* if token unreadable, just logout */ }
+  doLogout();
+}
+
+function doLogout() {
+  localStorage.removeItem('mach_token');
+  localStorage.removeItem('mach_branch_id');
+  localStorage.removeItem('mach_branch_slug');
+  localStorage.removeItem('mach_branch_name');
+  window.location.href = 'index.html';
+}
+
+// ── Auth guard ──
+(function() {
+  const token = localStorage.getItem('mach_token');
+  if (!token) { window.location.href = 'index.html'; return; }
+
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const role = payload.role;
+
+    // Non-owner must have a branch assigned
+    if (role !== 'owner' && !payload.branch_id) {
+      window.location.href = 'index.html'; return;
+    }
+
+    // If not owner, lock to their own branch
+    if (role !== 'owner') {
+      localStorage.setItem('mach_branch_id', payload.branch_id);
+    }
+
+    // Update branch pill in header dynamically
+    const pillText = document.getElementById('branch-pill-text');
+    if (pillText) pillText.textContent = BRANCH_LABEL || 'Branch';
+
+    document.getElementById('auth-gate').style.display = 'none';
+    init();
+  } catch {
+    window.location.href = 'index.html';
+  }
+})();
+
+let mode = 'today', selDate = todayStr();
+
+function todayStr() { return new Date().toISOString().slice(0, 10); }
+function subtractDays(n) { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); }
+
+document.getElementById('date-picker').value = todayStr();
+document.getElementById('date-picker').addEventListener('change', function() {
+  selDate = this.value; mode = 'custom';
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  fetchOrders();
+});
+
+function selectChip(el, days) {
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  if (days === -1) { mode = 'all'; selDate = null; document.getElementById('date-picker').value = ''; }
+  else if (days === 7) { mode = 'week'; selDate = null; document.getElementById('date-picker').value = ''; }
+  else { mode = days === 0 ? 'today' : 'yesterday'; selDate = subtractDays(days); document.getElementById('date-picker').value = selDate; }
+  fetchOrders();
+}
+
+function jumpDate(d) {
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  selDate = d; mode = 'custom'; document.getElementById('date-picker').value = d; fetchOrders();
+}
+
+function cardClass(p) {
+  const has2 = p.includes(2), has3 = p.includes(3);
+  if (has2 && has3) return 'p123';
+  if (has2) return 'p12';
+  if (has3) return 'p13';
+  return 'p1only';
+}
+
+async function fetchOrders() {
+  try {
+    let url = `/api/orders/routing?branch_id=${BRANCH_ID}`;
+    if (mode === 'today' || mode === 'yesterday' || mode === 'custom') url += `&date=${selDate}`;
+
+    const token = localStorage.getItem('mach_token') || '';
+    const res   = await fetch(url, { headers: token ? { Authorization: 'Bearer ' + token } : {} });
+    const data  = await res.json();
+    if (!data.success) throw new Error('API error');
+
+    let orders = data.orders || [];
+    if (mode === 'week') { const cut = subtractDays(6); orders = orders.filter(o => o.timestamp.slice(0,10) >= cut); }
+
+    // ── Available date chips ──
+    const avail = document.getElementById('avail-dates');
+    avail.innerHTML = (data.availableDates || []).slice(0, 10)
+      .map(d => `<div class="chip" style="font-size:0.6rem;padding:0.2rem 0.5rem" onclick="jumpDate('${d}')">${d}</div>`)
+      .join('') || '<span style="color:rgba(255,255,255,0.25);font-size:0.7rem">None yet</span>';
+
+    document.getElementById('last-upd').textContent = new Date().toLocaleTimeString('en-IN');
+    fetchCashRegister();
+    document.getElementById('s-total').textContent  = orders.length;
+    document.getElementById('s-rev').textContent    = '₹' + orders.reduce((s,o)=>s+o.grand,0).toLocaleString('en-IN');
+
+    const upiRev  = orders.filter(o => (o.paymentMode||'').toUpperCase() === 'UPI').reduce((s,o)=>s+o.grand,0);
+    todayCashRevenue = orders.filter(o => (o.paymentMode||'').toUpperCase() === 'CASH').reduce((s,o)=>s+o.grand,0);
+    document.getElementById('s-upi').textContent    = '₹' + upiRev.toLocaleString('en-IN');
+    document.getElementById('s-cash').textContent   = '₹' + todayCashRevenue.toLocaleString('en-IN');
+    const gstOrders = orders.filter(o => { const pm = (o.paymentMode||'').toUpperCase(); return pm === 'UPI' || pm === 'CASH'; });
+    const totalGst  = gstOrders.reduce((s,o) => s + ((o.cgst||0) + (o.sgst||0)), 0);
+    document.getElementById('s-gst').textContent   = '₹' + totalGst.toLocaleString('en-IN');
+
+    document.getElementById('s-p1').textContent     = orders.filter(o=>o.printers.includes(1)).length;
+    document.getElementById('s-p2').textContent     = orders.filter(o=>o.printers.includes(2)).length;
+    document.getElementById('s-p3').textContent     = orders.filter(o=>o.printers.includes(3)).length;
+
+    const container = document.getElementById('orders');
+    if (!orders.length) {
+      document.getElementById('item-summary').style.display = 'none';
+      const msg = mode === 'all' ? 'No orders yet.' : mode === 'week' ? 'No orders in the last 7 days.' : `No orders on ${selDate}.`;
+      container.innerHTML = `<div class="empty">📭 ${msg}</div>`; return;
+    }
+
+    container.innerHTML = orders.map(o => {
+      const pm = (o.paymentMode || 'Cash').toUpperCase();
+      const pmClass = pm === 'UPI' ? 'pm-upi' : pm === 'CASH' ? 'pm-cash' : 'pm-other';
+      const pmIcon  = pm === 'UPI' ? '📲' : pm === 'CASH' ? '💵' : '💳';
+      return `
+      <div class="order-card ${cardClass(o.printers)}">
+        <div class="card-main">
+          <div class="order-top">
+            <span class="inv-no">${o.invoiceNo}</span>
+            <span class="table-tag">${o.tableNo}</span>
+            <span class="status-tag status-${o.status}">${o.status}</span>
+            <span class="pm-badge ${pmClass}">${pmIcon} ${pm}</span>
+            <span class="time-tag">${new Date(o.timestamp).toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short'})}</span>
+          </div>
+          <div class="printer-badges">
+            ${o.printers.map(p=>`<span class="p-badge p${p}">🖨 P${p} — ${p===1?'Full Invoice':p===2?'Beverages':'Food'}</span>`).join('')}
+          </div>
+          <div class="items-cols">
+            ${o.breakdown.beverages.length ? `<div class="items-col"><h4>☕ Beverages → P2</h4>${o.breakdown.beverages.map(i=>`<div class="item-row"><span>${i.name}</span><span class="item-meta">×${i.qty} · ₹${i.amount}</span></div>`).join('')}</div>` : ''}
+            ${o.breakdown.food.length ? `<div class="items-col"><h4>🍛 Food → P3</h4>${o.breakdown.food.map(i=>`<div class="item-row"><span>${i.name}</span><span class="item-meta">×${i.qty} · ₹${i.amount}</span></div>`).join('')}</div>` : ''}
+            ${!o.breakdown.beverages.length && !o.breakdown.food.length ? `<div class="items-col"><h4>📄 All Items → P1</h4>${o.breakdown.all.map(i=>`<div class="item-row"><span>${i.name}</span><span class="item-meta">×${i.qty} · ₹${i.amount}</span></div>`).join('')}</div>` : ''}
+          </div>
+        </div>
+        <div class="card-right">
+        <div>
+          <div class="grand-label">Grand Total</div>
+          <div class="grand-amount">₹${o.grand.toLocaleString('en-IN')}</div>
+          ${(o.cgst || o.sgst)
+          ? `<div style="font-size:0.68rem;color:var(--muted);margin-top:0.2rem">CGST ₹${o.cgst} · SGST ₹${o.sgst}</div>`
+          : `<div style="font-size:0.68rem;color:var(--muted);margin-top:0.2rem;letter-spacing:1px">NO GST</div>`
+          }
+          <div class="pm-total ${pmClass}">${pmIcon} ${pm}</div>
+          </div>
+          <div>
+            <div class="customer-name">👤 ${o.customer}</div>
+            <div class="customer-phone">📞 ${o.phone}</div>
+            <button class="btn-reprint" onclick="reprintOrder('${o.invoiceNo}')">🖨 Reprint</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+    renderItemSummary(orders);
+
+  } catch(e) {
+    document.getElementById('orders').innerHTML =
+      `<div class="error">⚠️ Could not connect to server.<br>
+       <small style="font-size:0.8rem;margin-top:0.4rem;display:block;color:#8A6B55">
+         Make sure <strong>node server.js</strong> is running at <strong>http://localhost:3000</strong>
+       </small></div>`;
+  }
+}
+async function reprintOrder(invoiceNo) {
+  try {
+    const token = localStorage.getItem('mach_token') || '';
+    const res   = await fetch(`/api/orders/invoice/${invoiceNo}`, {
+      headers: token ? { Authorization: 'Bearer ' + token } : {}
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error('Not found');
+
+    const inv   = data.invoice;
+    const items = inv.items.map(i =>
+      `<tr><td>${i.name}</td><td style="text-align:center">${i.qty}</td><td style="text-align:right">₹${i.amount}</td></tr>`
+    ).join('');
+
+    const gstRows = (inv.cgst || inv.sgst) ? `
+      <tr><td colspan="2">CGST (2.5%)</td><td style="text-align:right">₹${inv.cgst}</td></tr>
+      <tr><td colspan="2">SGST (2.5%)</td><td style="text-align:right">₹${inv.sgst}</td></tr>` : '';
+
+    const win = window.open('', '_blank', 'width=400,height=600');
+    win.document.write(`<!DOCTYPE html><html><head>
+      <title>Invoice ${invoiceNo}</title>
+      <style>
+      @page { margin: 0; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        font-family: 'Courier New', monospace;
+        font-size: 11px;
+        width: 48mm;   /* change to 72mm if using 80mm roll */
+        padding: 4mm;
+      }
+      h2 { text-align: center; font-size: 13px; margin-bottom: 2px; }
+      .sub { text-align: center; font-size: 10px; color: #333; margin-bottom: 3px; }
+      table { width: 100%; border-collapse: collapse; }
+      td, th { padding: 2px 1px; font-size: 10px; }
+      .divider { border-top: 1px dashed #555; margin: 4px 0; }
+      .total td { font-weight: bold; font-size: 12px; border-top: 1px solid #000; padding-top: 3px; }
+    </style>
+    </head><body>
+      <h2>MACH Cafe</h2>
+      <div class="sub">${BRANCH_LABEL}</div>
+      <div class="sub">${invoiceNo} · Table: ${inv.tableNo}</div>
+      <div class="sub">${new Date(inv.timestamp).toLocaleString('en-IN')}</div>
+      <div class="divider"></div>
+      <table>
+        <tr><th style="text-align:left">Item</th><th>Qty</th><th style="text-align:right">Amt</th></tr>
+        <tr><td colspan="3"><hr style="border:none;border-top:1px dashed #ccc"></td></tr>
+        ${items}
+        <tr><td colspan="3" class="divider"></td></tr>
+        <tr><td colspan="2">Subtotal</td><td style="text-align:right">₹${inv.subtotal}</td></tr>
+        ${gstRows}
+        <tr class="total"><td colspan="2">GRAND TOTAL</td><td style="text-align:right">₹${inv.grand}</td></tr>
+      </table>
+      <div class="divider"></div>
+      <div class="sub">${inv.paymentMode?.toUpperCase() || 'CASH'} · ${inv.customer?.name || 'Walk-in'}</div>
+      <div class="sub">Thank you for visiting!</div>
+    </body></html>`);
+    win.document.close();
+    win.focus();
+    win.print();
+  } catch(e) {
+    alert('Could not fetch invoice for reprint.');
+  }
+}
+function renderItemSummary(orders) {
+  const counts = {};
+  for (const o of orders) {
+    for (const i of [...o.breakdown.beverages, ...o.breakdown.food, ...o.breakdown.all]) {
+      if (!counts[i.name]) counts[i.name] = { qty: 0, type: o.breakdown.beverages.find(b => b.name === i.name) ? 'bev' : o.breakdown.food.find(f => f.name === i.name) ? 'food' : 'bev' };
+      counts[i.name].qty += i.qty;
+    }
+  }
+
+  // Deduplicate (all[] overlaps with beverages/food)
+  const seen = new Set();
+  const entries = [];
+  for (const o of orders) {
+    for (const i of o.breakdown.beverages) { if (!seen.has(i.name)) { seen.add(i.name); entries.push({ name: i.name, type: 'bev' }); } }
+    for (const i of o.breakdown.food)      { if (!seen.has(i.name)) { seen.add(i.name); entries.push({ name: i.name, type: 'food' }); } }
+    for (const i of o.breakdown.all)       { if (!seen.has(i.name)) { seen.add(i.name); entries.push({ name: i.name, type: 'bev' }); } }
+  }
+
+  const totals = {};
+  for (const o of orders) {
+    const allItems = [...o.breakdown.beverages, ...o.breakdown.food, ...o.breakdown.all];
+    for (const i of allItems) {
+      if (!totals[i.name]) totals[i.name] = 0;
+      totals[i.name] += i.qty;
+    }
+  }
+
+  // avoid double-counting items that appear in both all[] and beverages/food
+  const finalTotals = {};
+  for (const o of orders) {
+    const hasCats = o.breakdown.beverages.length || o.breakdown.food.length;
+    const src = hasCats ? [...o.breakdown.beverages, ...o.breakdown.food] : o.breakdown.all;
+    for (const i of src) {
+      if (!finalTotals[i.name]) finalTotals[i.name] = { qty: 0, type: o.breakdown.beverages.find(b => b.name === i.name) ? 'bev' : 'food' };
+      finalTotals[i.name].qty += i.qty;
+    }
+  }
+
+  const sorted = Object.entries(finalTotals).sort((a, b) => b[1].qty - a[1].qty);
+  const grid   = document.getElementById('item-summary-grid');
+  const wrap   = document.getElementById('item-summary');
+
+  if (!sorted.length) { wrap.style.display = 'none'; return; }
+
+  grid.innerHTML = sorted.map(([name, { qty, type }]) => `
+    <div class="item-chip ${type}">
+      <span class="item-chip-name">${name}</span>
+      <span class="item-chip-count">×${qty}</span>
+    </div>
+  `).join('');
+  wrap.style.display = 'block';
+}
+// ── Cash Register ──
+let cashModalType = 'open';
+let todayCash = { opening: null, closing: null, given: null };
+let todayCashRevenue = 0;
+let pendingLogout = false;
+async function fetchCashRegister() {
+  if (!BRANCH_ID) return;
+  try {
+    const token = localStorage.getItem('mach_token') || '';
+    const date  = (mode === 'today' || mode === 'yesterday' || mode === 'custom') ? selDate : todayStr();
+    const res   = await fetch(`/api/cash/today?branch_id=${BRANCH_ID}&date=${date}&_=${Date.now()}`, {
+      headers: token ? { Authorization: 'Bearer ' + token } : {}
+    });
+    const data = await res.json();
+    if (!data.success) return;
+    todayCash = { opening: data.opening_cash, closing: data.closing_cash, given: data.given_to_owner ?? null, date };
+    renderCashBar();
+  } catch(e) { /* silent */ }
+}
+function renderCashBar() {
+  const { opening, closing, date } = todayCash;
+  const isToday = date === todayStr();
+
+  // Opening
+  const openEl  = document.getElementById('cb-opening-val');
+  const openBtn = document.getElementById('btn-set-opening');
+  if (opening !== null && opening !== undefined) {
+    openEl.textContent = '₹' + Number(opening).toLocaleString('en-IN');
+    openEl.className   = 'cash-block-value';
+  } else {
+    openEl.textContent = isToday ? 'Not set' : '—';
+    openEl.className   = 'cash-block-value not-set';
+  }
+  openBtn.style.display  = isToday ? '' : 'none';
+  openBtn.textContent    = opening !== null && opening !== undefined ? 'Edit Opening' : 'Set Opening';
+
+  // Closing
+  const closeEl  = document.getElementById('cb-closing-val');
+  const closeBtn = document.getElementById('btn-set-closing');
+  if (closing !== null && closing !== undefined) {
+    closeEl.textContent = '₹' + Number(closing).toLocaleString('en-IN');
+    closeEl.className   = 'cash-block-value';
+  } else {
+    closeEl.textContent = isToday ? 'Not set' : '—';
+    closeEl.className   = 'cash-block-value not-set';
+  }
+  closeBtn.style.display = isToday && (opening !== null && opening !== undefined) ? '' : 'none';
+  closeBtn.textContent   = closing !== null && closing !== undefined ? 'Edit Closing' : 'Set Closing';
+
+  // Given to Owner
+  const givenEl  = document.getElementById('cb-given-val');
+  const givenBtn = document.getElementById('btn-set-given');
+  const { given } = todayCash;
+  if (given !== null && given !== undefined) {
+    givenEl.textContent = '₹' + Number(given).toLocaleString('en-IN');
+    givenEl.className   = 'cash-block-value';
+  } else {
+    givenEl.textContent = isToday ? 'Not set' : '—';
+    givenEl.className   = 'cash-block-value not-set';
+  }
+  givenBtn.style.display = isToday ? '' : 'none';
+  givenBtn.textContent   = given !== null && given !== undefined ? 'Edit Given to Owner' : 'Set Given to Owner';
+
+  // Date label — show which day we're viewing
+  const titleEl = document.querySelector('.cash-bar-title');
+  if (titleEl) titleEl.textContent = isToday ? '💵 Cash Register — Today' : `💵 Cash Register — ${date}`;
+
+  // Discrepancy
+  const discBlock = document.getElementById('cb-disc');
+  if (opening !== null && closing !== null && opening !== undefined && closing !== undefined) {
+    const cashRev  = todayCashRevenue;
+    const expected = Number(opening) + cashRev;
+    const diff     = Number(closing) - expected;
+    const discEl   = document.getElementById('cb-disc-val');
+    const isOk     = Math.abs(diff) <= 10;
+    discEl.textContent  = (diff >= 0 ? '+' : '') + '₹' + diff.toLocaleString('en-IN');
+    discEl.className    = 'cash-block-value cash-discrepancy-value ' + (isOk ? 'ok' : 'warn');
+    discBlock.className = 'cash-block discrepancy ' + (isOk ? 'ok' : 'warn');
+    discBlock.style.display = '';
+  } else {
+    discBlock.style.display = 'none';
+  }
+}
+function openCashModal(type) {
+  cashModalType = type;
+  const titles = { open: 'Opening Cash', close: 'Closing Cash', given: 'Given to Owner' };
+  const subs   = {
+    open:  'Enter the cash float in the drawer at start of day.',
+    close: 'Enter the actual cash counted in the drawer now.',
+    given: 'Enter the total cash amount given by the cashier to the owner today.'
+  };
+  document.getElementById('cash-modal-title').textContent = titles[type];
+  document.getElementById('cash-modal-sub').textContent   = subs[type];
+  const current = type === 'open' ? todayCash.opening : type === 'close' ? todayCash.closing : todayCash.given;
+  document.getElementById('cash-modal-input').value = current !== null && current !== undefined ? current : '';
+  document.getElementById('cash-modal').style.display = 'flex';
+  setTimeout(() => document.getElementById('cash-modal-input').focus(), 50);
+}
+
+function closeCashModal() {
+  document.getElementById('cash-modal').style.display = 'none';
+  if (pendingLogout) {
+    pendingLogout = false;
+    alert('You must set the closing cash before logging out.');
+  }
+}
+
+async function submitCash() {
+  const amount = parseFloat(document.getElementById('cash-modal-input').value);
+  if (isNaN(amount) || amount < 0) { alert('Please enter a valid amount.'); return; }
+
+  try {
+    const token = localStorage.getItem('mach_token') || '';
+    const endpointMap = { open: '/api/cash/open', close: '/api/cash/close', given: '/api/cash/given' };
+    const endpoint = endpointMap[cashModalType];
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) },
+      body: JSON.stringify({ branch_id: BRANCH_ID, amount })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.error || 'Failed');
+
+    if (cashModalType === 'open')  todayCash.opening = amount;
+    else if (cashModalType === 'close') todayCash.closing = amount;
+    else todayCash.given = amount;
+
+   const shouldLogout = pendingLogout && cashModalType === 'close';
+    closeCashModal();
+    await fetchCashRegister();
+    if (shouldLogout) {
+      pendingLogout = false;
+      doLogout();
+    }
+  } catch(e) {
+    alert('Could not save: ' + e.message);
+  }
+}
+
+function printCashSummary() {
+  const { opening, closing, given, date } = todayCash;
+  const cashRev  = todayCashRevenue;
+  const expected = (opening !== null && opening !== undefined) ? (Number(opening) + cashRev) : null;
+  const diff     = (closing !== null && closing !== undefined && expected !== null) ? (Number(closing) - expected) : null;
+  const displayDate = date || todayStr();
+
+  const fmt = v => (v !== null && v !== undefined) ? '\u20B9' + Number(v).toLocaleString('en-IN') : 'N/A';
+  const discText = diff !== null
+    ? ((diff >= 0 ? '+' : '') + '\u20B9' + Math.abs(diff).toLocaleString('en-IN') + (Math.abs(diff) <= 10 ? '  OK' : '  MISMATCH'))
+    : 'N/A';
+
+  const win = window.open('', '_blank', 'width=400,height=650');
+  win.document.write(`<!DOCTYPE html><html><head>
+    <title>Cash Summary ${displayDate}</title>
+    <style>
+      @page { margin: 0; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        font-family: 'Courier New', monospace;
+        font-size: 11px;
+        width: 48mm;
+        padding: 4mm;
+      }
+      h2  { text-align: center; font-size: 13px; margin-bottom: 2px; letter-spacing: 1px; }
+      .sub { text-align: center; font-size: 10px; color: #333; margin-bottom: 2px; }
+      .divider { border-top: 1px dashed #555; margin: 5px 0; }
+      table { width: 100%; border-collapse: collapse; }
+      td { padding: 2px 1px; font-size: 10px; vertical-align: top; }
+      td:last-child { text-align: right; font-weight: bold; }
+      .section-head td {
+        font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase;
+        color: #555; padding-top: 4px; font-weight: normal;
+      }
+      .total-row td { font-weight: bold; font-size: 11px; border-top: 1px solid #000; padding-top: 3px; }
+      .given-row td { font-size: 12px; border-top: 1px solid #000; padding-top: 3px; }
+      .disc-ok   td:last-child { color: #000; }
+      .disc-warn td:last-child { color: #000; font-style: italic; }
+      .sig { margin-top: 8px; font-size: 10px; }
+      .sig-line { border-top: 1px solid #000; margin-top: 14px; padding-top: 2px; text-align: center; font-size: 9px; }
+      .center { text-align: center; }
+    </style>
+  </head><body>
+    <h2>MACH Cafe</h2>
+    <div class="sub">${BRANCH_LABEL}</div>
+    <div class="sub">CASH SUMMARY</div>
+    <div class="sub">${displayDate}</div>
+    <div class="divider"></div>
+
+    <table>
+      <tr class="section-head"><td colspan="2">Opening</td></tr>
+      <tr><td>Opening Cash</td><td>${fmt(opening)}</td></tr>
+      <tr><td>Cash Sales</td><td>${fmt(cashRev)}</td></tr>
+      <tr class="total-row"><td>Expected Closing</td><td>${expected !== null ? fmt(expected) : 'N/A'}</td></tr>
+    </table>
+
+    <div class="divider"></div>
+
+    <table>
+      <tr class="section-head"><td colspan="2">Closing</td></tr>
+      <tr><td>Actual Closing</td><td>${fmt(closing)}</td></tr>
+      <tr class="${diff !== null && Math.abs(diff) <= 10 ? 'disc-ok' : 'disc-warn'}">
+        <td>Discrepancy</td><td>${discText}</td>
+      </tr>
+    </table>
+
+    <div class="divider"></div>
+
+    <table>
+      <tr class="given-row"><td>Given to Owner</td><td>${fmt(given)}</td></tr>
+    </table>
+
+    <div class="divider"></div>
+
+    <div class="sig">
+      <div class="sig-line">Cashier</div>
+      <div class="sig-line" style="margin-top:18px">Owner</div>
+    </div>
+
+    <div class="divider" style="margin-top:8px"></div>
+    <div class="sub" style="margin-top:4px">Printed: ${new Date().toLocaleString('en-IN',{dateStyle:'short',timeStyle:'short'})}</div>
+  </body></html>`);
+  win.document.close();
+  win.focus();
+  win.print();
+}
+function init() { fetchCashRegister(); fetchOrders(); setInterval(fetchOrders, 5000); setInterval(fetchCashRegister, 30000); }
+</script>
+</body>
+</html>
